@@ -1,0 +1,31 @@
+Package: PRSfromPGS
+Title: Calculate Polygenic Risk Scores from PGS Catalog Models
+Version: 0.1.0
+Authors@R: person("PRSfromPGS Authors", role = c("aut", "cre"),
+    email = "placeholder@example.com")
+Description: Calculates Polygenic Risk Scores (PRS) from genetic data. Reads
+    genotype dosage data from bgzipped VCF files and applies PGS Catalog-format
+    scoring models to produce per-sample risk scores.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+biocViews: Genetics, GenomicVariation, SNP, VariantAnnotation
+Imports:
+    VariantAnnotation,
+    Rsamtools,
+    data.table,
+    GenomicRanges,
+    SummarizedExperiment,
+    GenomeInfoDb,
+    IRanges,
+    Biostrings,
+    methods,
+    stats
+Suggests:
+    BiocParallel,
+    future,
+    future.apply,
+    parallelly,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
