@@ -1,0 +1,21 @@
+# R package build artifacts
+*.Rcheck/
+*.tar.gz
+
+# RStudio project files
+*.Rproj
+.Rproj.user/
+
+# R session files
+.Rhistory
+.Rdata
+.RData
+.httr-oauth
+
+# OS files
+.DS_Store
+Thumbs.db
+nul
+
+# Byte-compiled / optimized
+*.Rproj.user
