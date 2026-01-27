@@ -17,5 +17,9 @@
 Thumbs.db
 nul
 
+# Test VCF files
+chr1.vcf
+chr1.vcf.gz
+
 # Byte-compiled / optimized
 *.Rproj.user
