@@ -20,6 +20,7 @@ Imports:
     GenomeInfoDb,
     IRanges,
     Biostrings,
+    BiocGenerics,
     methods,
     stats
 Suggests:

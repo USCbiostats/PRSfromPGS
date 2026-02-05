@@ -194,7 +194,7 @@ getsnpinfo <- function(vcf_file, genome = "hg19", verbose = TRUE) {
 #' rr <- result$rr
 #' }
 summarizesnpinfo <- function(vcf_snps, verbose = TRUE) {
-  # Extract rowRanges
+  # Extract rowRanges (use VariantAnnotation's method for VCF objects)
   rr <- rowRanges(vcf_snps)
 
   # Create data frame
@@ -311,7 +311,7 @@ getvcfsnp <- function(vcf_summary, snp_indices, verbose = FALSE) {
     # Note: readVcf may return multiple SNPs if they fall within the same ranges
     vcf <- readVcf(vcf_file, genome = genome, param = param)
 
-    # Get SNP information from the VCF
+    # Get SNP information from the VCF (use VariantAnnotation's method for VCF objects)
     vcf_rowranges <- rowRanges(vcf)
     actual_snp_ids <- names(vcf_rowranges)
 

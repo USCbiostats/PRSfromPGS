@@ -6,12 +6,13 @@
 #' @import Rsamtools
 #' @importFrom data.table as.data.table fread .I
 #' @importFrom GenomicRanges seqnames
-#' @importFrom SummarizedExperiment rowRanges
 #' @importFrom GenomeInfoDb seqnames
 #' @importFrom IRanges ranges
+#' @importFrom SummarizedExperiment rowRanges
 #' @importFrom Biostrings DNAStringSet
 #' @importFrom methods is
-#' @importFrom stats sd start
+#' @importFrom stats sd
+#' @importFrom BiocGenerics start
 ## usethis namespace: end
 NULL
 
