@@ -4,3 +4,5 @@
 ^\.Rproj\.user$
 ^chr1\.vcf$
 ^chr1\.vcf\.gz$
+^chr1\.vcf\.gz\.tbi$
+^chr1\.old\.vcf$
