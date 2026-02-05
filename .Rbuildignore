@@ -6,3 +6,7 @@
 ^chr1\.vcf\.gz$
 ^chr1\.vcf\.gz\.tbi$
 ^chr1\.old\.vcf$
+^chr2\.vcf$
+^chr2\.vcf\.gz$
+^chr2\.vcf\.gz\.tbi$
+^chromosome.*VCFsummary\.rds$

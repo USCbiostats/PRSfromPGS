@@ -22,6 +22,12 @@ chr1.vcf
 chr1.vcf.gz
 chr1.vcf.gz.tbi
 chr1.old.vcf
+chr2.vcf
+chr2.vcf.gz
+chr2.vcf.gz.tbi
+
+# VCF summary files
+chromosome*VCFsummary.rds
 
 # Byte-compiled / optimized
 *.Rproj.user
