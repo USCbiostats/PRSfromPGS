@@ -188,9 +188,10 @@ readPGSmodel <- function(file_path, verbose = TRUE) {
 #' @param chr Chromosome identifier
 #' @param pgsmodel Data frame with PGS model data
 #' @param batch_size Integer; maximum number of SNPs to read from VCF at once
+#' @param vcf_dir Character string specifying directory containing VCF summary files
 #' @return A list containing chr_prs, unmatched_count, unmatched_rsIDs, and status info
 #' @keywords internal
-processSingleChromosome <- function(chr, pgsmodel, batch_size) {
+processSingleChromosome <- function(chr, pgsmodel, batch_size, vcf_dir) {
   # Filter pgsmodel for current chromosome
   chr_pgsmodel <- pgsmodel[pgsmodel$chr_name == chr, ]
 
@@ -207,7 +208,7 @@ processSingleChromosome <- function(chr, pgsmodel, batch_size) {
   }
 
   # Load VCF summary for this chromosome
-  vcf_summary_file <- sprintf("chromosome%sVCFsummary.rds", chr)
+  vcf_summary_file <- file.path(vcf_dir, sprintf("chromosome%sVCFsummary.rds", chr))
 
   if (!file.exists(vcf_summary_file)) {
     return(list(
@@ -297,6 +298,7 @@ snp_matches <- findSNPs(chr_pgsmodel, vcf_summary$snp_summary$snp_df)
 #' @param pgsmodel Data frame returned from readPGSmodel() containing PGS variant information.
 #'   Expected columns: rsID, chr_name, chr_position, effect_allele, other_allele, effect_weight
 #' @param chromosomes Integer vector of chromosome numbers to process. Default is 1:22 (autosomes).
+#' @param vcf_dir Character string specifying directory containing VCF summary files. Default is "." (current directory).
 #' @param batch_size Integer; maximum number of SNPs to read from VCF at once. Default is 1000.
 #' @param parallel Logical; if TRUE, process chromosomes in parallel using future. Default is FALSE.
 #' @param n_cores Integer; number of cores to use for parallel processing. Default is NULL (use all available).
@@ -339,8 +341,11 @@ snp_matches <- findSNPs(chr_pgsmodel, vcf_summary$snp_summary$snp_df)
 #'
 #' # Calculate PRS in parallel with specific number of cores
 #' result <- calculatePRS(pgs_model, parallel = TRUE, n_cores = 4)
+#'
+#' # Calculate PRS using VCF summaries from a specific directory
+#' result <- calculatePRS(pgs_model, vcf_dir = "vcf_summaries")
 #' }
-calculatePRS <- function(pgsmodel, chromosomes = 1:22, batch_size = 1000, parallel = FALSE, n_cores = NULL, verbose = TRUE) {
+calculatePRS <- function(pgsmodel, chromosomes = 1:22, vcf_dir = ".", batch_size = 1000, parallel = FALSE, n_cores = NULL, verbose = TRUE) {
   # Validate inputs
   if (!is.data.frame(pgsmodel)) {
     stop("pgsmodel must be a data frame returned from readPGSmodel()")
@@ -405,7 +410,7 @@ calculatePRS <- function(pgsmodel, chromosomes = 1:22, batch_size = 1000, parall
 
     # Process chromosomes in parallel
     chr_results <- future.apply::future_lapply(chromosomes, function(chr) {
-      processSingleChromosome(chr, pgsmodel, batch_size)
+      processSingleChromosome(chr, pgsmodel, batch_size, vcf_dir)
     }, future.seed = TRUE)
 
   } else {
@@ -415,7 +420,7 @@ calculatePRS <- function(pgsmodel, chromosomes = 1:22, batch_size = 1000, parall
         message(sprintf("\n=== Processing chromosome %s ===", chr))
       }
 
-      result <- processSingleChromosome(chr, pgsmodel, batch_size)
+      result <- processSingleChromosome(chr, pgsmodel, batch_size, vcf_dir)
 
       if (verbose) {
         if (result$status == "no_variants") {
@@ -819,11 +824,12 @@ calculatePRSref <- function(ref_matches, prssnps, vcf_summary, batch_size = 1000
 #' @param models Named list of PGS model data frames
 #' @param model_names Character vector of model names
 #' @param batch_size Integer; maximum number of SNPs to read from VCF at once
+#' @param vcf_dir Character string specifying directory containing VCF summary files
 #' @return A list containing results for all models for this chromosome
 #' @keywords internal
-processChromosomeForModels <- function(chr, models, model_names, batch_size) {
+processChromosomeForModels <- function(chr, models, model_names, batch_size, vcf_dir) {
   # Load VCF summary for this chromosome
-  vcf_summary_file <- sprintf("chromosome%sVCFsummary.rds", chr)
+  vcf_summary_file <- file.path(vcf_dir, sprintf("chromosome%sVCFsummary.rds", chr))
 
   if (!file.exists(vcf_summary_file)) {
     # Return empty results for all models
@@ -942,6 +948,7 @@ processChromosomeForModels <- function(chr, models, model_names, batch_size) {
 #'
 #' @param model_files Character vector of file paths to PGS model files
 #' @param chromosomes Integer vector of chromosome numbers to process. Default is 1:22 (autosomes).
+#' @param vcf_dir Character string specifying directory containing VCF summary files. Default is "." (current directory).
 #' @param batch_size Integer; maximum number of SNPs to read from VCF at once. Default is 1000.
 #' @param parallel Logical; if TRUE, process chromosomes in parallel using future. Default is FALSE.
 #' @param n_cores Integer; number of cores to use for parallel processing. Default is NULL (use all available).
@@ -980,8 +987,11 @@ processChromosomeForModels <- function(chr, models, model_names, batch_size) {
 #'
 #' # Fit models in parallel with specific number of cores
 #' results <- fitPRSmodels(model_files, parallel = TRUE, n_cores = 4)
+#'
+#' # Fit models using VCF summaries from a specific directory
+#' results <- fitPRSmodels(model_files, vcf_dir = "vcf_summaries")
 #' }
-fitPRSmodels <- function(model_files, chromosomes = 1:22, batch_size = 1000, parallel = FALSE, n_cores = NULL, verbose = TRUE) {
+fitPRSmodels <- function(model_files, chromosomes = 1:22, vcf_dir = ".", batch_size = 1000, parallel = FALSE, n_cores = NULL, verbose = TRUE) {
   # Validate inputs
   if (!is.character(model_files) || length(model_files) == 0) {
     stop("model_files must be a non-empty character vector")
@@ -1064,7 +1074,7 @@ fitPRSmodels <- function(model_files, chromosomes = 1:22, batch_size = 1000, par
 
     # Process chromosomes in parallel
     chr_results <- future.apply::future_lapply(chromosomes, function(chr) {
-      processChromosomeForModels(chr, models, model_names, batch_size)
+      processChromosomeForModels(chr, models, model_names, batch_size, vcf_dir)
     }, future.seed = TRUE)
 
   } else {
@@ -1074,7 +1084,7 @@ fitPRSmodels <- function(model_files, chromosomes = 1:22, batch_size = 1000, par
         message(sprintf("\n=== Processing chromosome %s ===", chr))
       }
 
-      result <- processChromosomeForModels(chr, models, model_names, batch_size)
+      result <- processChromosomeForModels(chr, models, model_names, batch_size, vcf_dir)
 
       if (verbose) {
         if (result$status == "file_not_found") {

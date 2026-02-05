@@ -421,6 +421,7 @@ summarizevcf <- function(vcf_file, genome = "hg19", verbose = TRUE) {
 #'
 #' @param vcf_files Character vector of paths to VCF files (must be bgzipped)
 #' @param genome Character string specifying genome build (e.g., "hg19", "hg38"). Applied to all files.
+#' @param output_dir Character string specifying directory to store VCF summary files. Default is "." (current directory).
 #' @param tabix Logical; if TRUE, create tabix index files for the VCF files. Default is FALSE.
 #' @param ncores Integer; number of cores for parallel processing. Default is 1 (sequential).
 #' @param verbose Logical; if TRUE, display informational messages. Default is TRUE.
@@ -432,13 +433,21 @@ summarizevcf <- function(vcf_file, genome = "hg19", verbose = TRUE) {
 #' prepareVCFfiles(vcf_files, genome = "hg19", tabix = TRUE)
 #' # Use parallel processing with 4 cores
 #' prepareVCFfiles(vcf_files, genome = "hg19", ncores = 4)
+#' # Store summary files in a specific directory
+#' prepareVCFfiles(vcf_files, genome = "hg19", output_dir = "vcf_summaries")
 #' # Suppress messages
 #' prepareVCFfiles(vcf_files, verbose = FALSE)
 #' }
-prepareVCFfiles <- function(vcf_files, genome = "hg19", tabix = FALSE, ncores = 1, verbose = TRUE) {
+prepareVCFfiles <- function(vcf_files, genome = "hg19", output_dir = ".", tabix = FALSE, ncores = 1, verbose = TRUE) {
   # Validate inputs
   if (length(vcf_files) == 0) {
     stop("vcf_files vector is empty")
+  }
+
+  # Create output directory if it doesn't exist
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+    if (verbose) message(sprintf("Created output directory: %s", output_dir))
   }
 
   # Create tabix index files if requested
@@ -448,7 +457,7 @@ prepareVCFfiles <- function(vcf_files, genome = "hg19", tabix = FALSE, ncores = 
   }
 
   # Helper function to process a single VCF file
-  process_single_vcf <- function(vcf_file, genome, verbose) {
+  process_single_vcf <- function(vcf_file, genome, output_dir, verbose) {
     # Summarize VCF
     vcf_summary <- summarizevcf(vcf_file, genome = genome, verbose = verbose)
 
@@ -456,7 +465,7 @@ prepareVCFfiles <- function(vcf_files, genome = "hg19", tabix = FALSE, ncores = 
     chr_name <- vcf_summary$snp_summary$snp_df$seqnames[1]
     # Strip 'chr' prefix (case-insensitive) if present for consistent filename
     save_name <- sub("^chr", "", chr_name, ignore.case = TRUE)
-    rds_filename <- sprintf("chromosome%sVCFsummary.rds", save_name)
+    rds_filename <- file.path(output_dir, sprintf("chromosome%sVCFsummary.rds", save_name))
     saveRDS(vcf_summary, file = rds_filename)
 
     return(rds_filename)
@@ -477,7 +486,7 @@ prepareVCFfiles <- function(vcf_files, genome = "hg19", tabix = FALSE, ncores = 
       # Process files in parallel (verbose=FALSE in workers to avoid interleaved output)
       results <- BiocParallel::bplapply(vcf_files, function(vcf_file) {
         tryCatch({
-          rds_file <- process_single_vcf(vcf_file, genome, verbose = FALSE)
+          rds_file <- process_single_vcf(vcf_file, genome, output_dir, verbose = FALSE)
           list(success = TRUE, file = vcf_file, rds = rds_file, error = NA)
         }, error = function(e) {
           list(success = FALSE, file = vcf_file, rds = NA, error = e$message)
@@ -507,7 +516,7 @@ prepareVCFfiles <- function(vcf_files, genome = "hg19", tabix = FALSE, ncores = 
 
     if (verbose) message(sprintf("\n=== Processing VCF file %d/%d: %s ===", i, length(vcf_files), vcf_file))
 
-    rds_filename <- process_single_vcf(vcf_file, genome, verbose)
+    rds_filename <- process_single_vcf(vcf_file, genome, output_dir, verbose)
     if (verbose) message(sprintf("Saved summary to: %s", rds_filename))
   }
 

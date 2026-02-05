@@ -4,7 +4,7 @@
 \alias{processSingleChromosome}
 \title{Process a Single Chromosome for PRS Calculation}
 \usage{
-processSingleChromosome(chr, pgsmodel, batch_size)
+processSingleChromosome(chr, pgsmodel, batch_size, vcf_dir)
 }
 \arguments{
 \item{chr}{Chromosome identifier}
@@ -12,6 +12,8 @@ processSingleChromosome(chr, pgsmodel, batch_size)
 \item{pgsmodel}{Data frame with PGS model data}
 
 \item{batch_size}{Integer; maximum number of SNPs to read from VCF at once}
+
+\item{vcf_dir}{Character string specifying directory containing VCF summary files}
 }
 \value{
 A list containing chr_prs, unmatched_count, unmatched_rsIDs, and status info

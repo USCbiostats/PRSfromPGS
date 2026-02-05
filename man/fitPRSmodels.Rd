@@ -7,6 +7,7 @@
 fitPRSmodels(
   model_files,
   chromosomes = 1:22,
+  vcf_dir = ".",
   batch_size = 1000,
   parallel = FALSE,
   n_cores = NULL,
@@ -17,6 +18,8 @@ fitPRSmodels(
 \item{model_files}{Character vector of file paths to PGS model files}
 
 \item{chromosomes}{Integer vector of chromosome numbers to process. Default is 1:22 (autosomes).}
+
+\item{vcf_dir}{Character string specifying directory containing VCF summary files. Default is "." (current directory).}
 
 \item{batch_size}{Integer; maximum number of SNPs to read from VCF at once. Default is 1000.}
 
@@ -67,5 +70,8 @@ results <- fitPRSmodels(model_files, parallel = TRUE)
 
 # Fit models in parallel with specific number of cores
 results <- fitPRSmodels(model_files, parallel = TRUE, n_cores = 4)
+
+# Fit models using VCF summaries from a specific directory
+results <- fitPRSmodels(model_files, vcf_dir = "vcf_summaries")
 }
 }

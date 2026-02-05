@@ -4,7 +4,7 @@
 \alias{processChromosomeForModels}
 \title{Process a Single Chromosome for Multiple PRS Models}
 \usage{
-processChromosomeForModels(chr, models, model_names, batch_size)
+processChromosomeForModels(chr, models, model_names, batch_size, vcf_dir)
 }
 \arguments{
 \item{chr}{Chromosome identifier}
@@ -14,6 +14,8 @@ processChromosomeForModels(chr, models, model_names, batch_size)
 \item{model_names}{Character vector of model names}
 
 \item{batch_size}{Integer; maximum number of SNPs to read from VCF at once}
+
+\item{vcf_dir}{Character string specifying directory containing VCF summary files}
 }
 \value{
 A list containing results for all models for this chromosome

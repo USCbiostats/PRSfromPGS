@@ -7,6 +7,7 @@
 prepareVCFfiles(
   vcf_files,
   genome = "hg19",
+  output_dir = ".",
   tabix = FALSE,
   ncores = 1,
   verbose = TRUE
@@ -16,6 +17,8 @@ prepareVCFfiles(
 \item{vcf_files}{Character vector of paths to VCF files (must be bgzipped)}
 
 \item{genome}{Character string specifying genome build (e.g., "hg19", "hg38"). Applied to all files.}
+
+\item{output_dir}{Character string specifying directory to store VCF summary files. Default is "." (current directory).}
 
 \item{tabix}{Logical; if TRUE, create tabix index files for the VCF files. Default is FALSE.}
 
@@ -35,6 +38,8 @@ vcf_files <- c("data/chr21.vcf.gz", "data/chr22.vcf.gz")
 prepareVCFfiles(vcf_files, genome = "hg19", tabix = TRUE)
 # Use parallel processing with 4 cores
 prepareVCFfiles(vcf_files, genome = "hg19", ncores = 4)
+# Store summary files in a specific directory
+prepareVCFfiles(vcf_files, genome = "hg19", output_dir = "vcf_summaries")
 # Suppress messages
 prepareVCFfiles(vcf_files, verbose = FALSE)
 }

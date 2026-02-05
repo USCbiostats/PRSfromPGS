@@ -7,6 +7,7 @@
 calculatePRS(
   pgsmodel,
   chromosomes = 1:22,
+  vcf_dir = ".",
   batch_size = 1000,
   parallel = FALSE,
   n_cores = NULL,
@@ -18,6 +19,8 @@ calculatePRS(
 Expected columns: rsID, chr_name, chr_position, effect_allele, other_allele, effect_weight}
 
 \item{chromosomes}{Integer vector of chromosome numbers to process. Default is 1:22 (autosomes).}
+
+\item{vcf_dir}{Character string specifying directory containing VCF summary files. Default is "." (current directory).}
 
 \item{batch_size}{Integer; maximum number of SNPs to read from VCF at once. Default is 1000.}
 
@@ -73,5 +76,8 @@ result <- calculatePRS(pgs_model, parallel = TRUE)
 
 # Calculate PRS in parallel with specific number of cores
 result <- calculatePRS(pgs_model, parallel = TRUE, n_cores = 4)
+
+# Calculate PRS using VCF summaries from a specific directory
+result <- calculatePRS(pgs_model, vcf_dir = "vcf_summaries")
 }
 }
