@@ -454,7 +454,9 @@ prepareVCFfiles <- function(vcf_files, genome = "hg19", tabix = FALSE, ncores = 
 
     # Save as RDS file using chromosome name from the VCF data
     chr_name <- vcf_summary$snp_summary$snp_df$seqnames[1]
-    rds_filename <- sprintf("chromosome%sVCFsummary.rds", chr_name)
+    # Strip 'chr' prefix (case-insensitive) if present for consistent filename
+    save_name <- sub("^chr", "", chr_name, ignore.case = TRUE)
+    rds_filename <- sprintf("chromosome%sVCFsummary.rds", save_name)
     saveRDS(vcf_summary, file = rds_filename)
 
     return(rds_filename)
