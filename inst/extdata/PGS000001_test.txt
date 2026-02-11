@@ -1,0 +1,22 @@
+###PGS CATALOG SCORING FILE - see https://www.pgscatalog.org/downloads/#dl_ftp_scoring for additional information
+#format_version=2.0
+##POLYGENIC SCORE (PGS) INFORMATION
+#pgs_id=PGS002880
+#pgs_name=ExPRSweb_CRP_28887542-GCST004941_PT_UKB_20211120
+#trait_reported=C-reactive protein
+#trait_mapped=C-reactive protein measurement
+#trait_efo=EFO_0004458
+#genome_build=GRCh37
+#variants_number=2
+#weight_type=beta
+##SOURCE INFORMATION
+#pgp_id=PGP000393
+#citation=Ma Y et al. Am J Hum Genet (2022). doi:10.1016/j.ajhg.2022.09.001
+##HARMONIZATION DETAILS
+#HmPOS_build=GRCh37
+#HmPOS_date=2022-11-18
+#HmPOS_match_chr={"True": 2, "False": 0}
+#HmPOS_match_pos={"True": 2, "False": 0}
+chr_name	chr_position	effect_allele	other_allele	effect_weight	hm_source	hm_rsID	hm_chr	hm_pos	hm_inferOtherAllele	hm_match_chr	hm_match_pos
+1	1001	A	G	-0.34	Author-reported		1	1001		True	True
+19	1005	C	T	-0.09	Author-reported		19	1005		True	True
