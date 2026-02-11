@@ -10,3 +10,4 @@
 ^chr2\.vcf\.gz$
 ^chr2\.vcf\.gz\.tbi$
 ^chromosome.*VCFsummary\.rds$
+^junk$

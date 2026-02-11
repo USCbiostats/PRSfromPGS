@@ -29,5 +29,8 @@ chr2.vcf.gz.tbi
 # VCF summary files
 chromosome*VCFsummary.rds
 
+# Junk directory
+junk/
+
 # Byte-compiled / optimized
 *.Rproj.user
