@@ -242,3 +242,101 @@ test_that("calculatePRS handles multiple chromosomes", {
   unlink(file.path(temp_dir_path, "chromosome3VCFsummary.rds"))
   unlink(file.path(temp_dir_path, "chromosome4VCFsummary.rds"))
 })
+
+test_that("calculatePRS works with parallel processing", {
+  # Skip if required packages not available
+  skip_if_not_installed("future")
+  skip_if_not_installed("future.apply")
+  skip_if_not_installed("parallelly")
+
+  # Skip if test files not available
+  mdlfile <- system.file("extdata", "PGS000001_test.txt", package = "PRSfromPGS")
+  skip_if(mdlfile == "", "Test model file PGS000001_test.txt not available")
+
+  vcffile3 <- system.file("extdata", "chr3.vcf.gz", package = "PRSfromPGS")
+  vcffile4 <- system.file("extdata", "chr4.vcf.gz", package = "PRSfromPGS")
+  skip_if(vcffile3 == "" || vcffile4 == "",
+          "Test VCF files chr3.vcf.gz and chr4.vcf.gz not available")
+
+  # Create temp directory
+  temp_dir_path <- tempdir()
+
+  # Prepare multiple VCF files (need multiple chromosomes for parallel to be meaningful)
+  prepareVCFfiles(c(vcffile3, vcffile4), output_dir = temp_dir_path, verbose = FALSE)
+
+  # Calculate PRS with parallel processing
+  mdl <- readPGSmodel(mdlfile, verbose = FALSE)
+  res_parallel <- suppressWarnings(
+    calculatePRS(mdl, c(3, 4), temp_dir_path, parallel = TRUE, n_cores = 2, verbose = FALSE)
+  )
+
+  # Calculate PRS without parallel processing for comparison
+  res_sequential <- suppressWarnings(
+    calculatePRS(mdl, c(3, 4), temp_dir_path, parallel = FALSE, verbose = FALSE)
+  )
+
+  # Verify parallel result structure
+  expect_type(res_parallel, "list")
+  expect_true("prs" %in% names(res_parallel))
+
+  # Results should be identical whether parallel or sequential
+  if (!is.null(res_parallel$prs) && !is.null(res_sequential$prs)) {
+    expect_equal(res_parallel$prs, res_sequential$prs,
+                 info = "Parallel and sequential PRS should produce identical results")
+  }
+
+  # Clean up
+  unlink(file.path(temp_dir_path, "chromosome3VCFsummary.rds"))
+  unlink(file.path(temp_dir_path, "chromosome4VCFsummary.rds"))
+})
+
+test_that("fitPRSmodels works with parallel processing", {
+  # Skip if required packages not available
+  skip_if_not_installed("future")
+  skip_if_not_installed("future.apply")
+  skip_if_not_installed("parallelly")
+
+  # Skip if test files not available
+  vcffile3 <- system.file("extdata", "chr3.vcf.gz", package = "PRSfromPGS")
+  vcffile4 <- system.file("extdata", "chr4.vcf.gz", package = "PRSfromPGS")
+  skip_if(vcffile3 == "" || vcffile4 == "",
+          "Test VCF files chr3.vcf.gz and chr4.vcf.gz not available")
+
+  # Find available test model files
+  model_files <- c(
+    system.file("extdata", "PGS000001_test.txt", package = "PRSfromPGS"),
+    system.file("extdata", "PGS000002_test.txt", package = "PRSfromPGS")
+  )
+  model_files <- model_files[file.exists(model_files) & model_files != ""]
+  skip_if(length(model_files) < 2, "Need at least 2 test model files for parallel test")
+
+  # Create temp directory
+  temp_dir_path <- tempdir()
+
+  # Prepare VCF files
+  prepareVCFfiles(c(vcffile3, vcffile4), output_dir = temp_dir_path, verbose = FALSE)
+
+  # Fit models with parallel processing
+  res_parallel <- suppressWarnings(
+    fitPRSmodels(model_files, c(3, 4), temp_dir_path, parallel = TRUE, n_cores = 2, verbose = FALSE)
+  )
+
+  # Fit models without parallel processing for comparison
+  res_sequential <- suppressWarnings(
+    fitPRSmodels(model_files, c(3, 4), temp_dir_path, parallel = FALSE, verbose = FALSE)
+  )
+
+  # Verify parallel result structure
+  expect_type(res_parallel, "list")
+  expect_true("prs" %in% names(res_parallel))
+
+  # Results should be identical whether parallel or sequential
+  if (!is.null(res_parallel$prs) && !is.null(res_sequential$prs)) {
+    expect_equal(res_parallel$prs, res_sequential$prs,
+                 info = "Parallel and sequential fitPRSmodels should produce identical results")
+  }
+
+  # Clean up
+  unlink(file.path(temp_dir_path, "chromosome3VCFsummary.rds"))
+  unlink(file.path(temp_dir_path, "chromosome4VCFsummary.rds"))
+})
