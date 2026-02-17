@@ -1,0 +1,565 @@
+---
+title: "Using PRSfromPGS to Calculate Polygenic Risk Scores"
+author: "PRSfromPGS Authors"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using PRSfromPGS to Calculate Polygenic Risk Scores}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+
+PRSfromPGS calculates Polygenic Risk Scores (PRS) from genetic data using PGS Catalog scoring models. This vignette demonstrates how to prepare your VCF files and use the package to compute risk scores.
+
+## Preparing VCF Files
+
+### Compression Requirements
+
+PRSfromPGS requires VCF files to be compressed using **bgzip** (block gzip), which enables efficient random access to specific genomic regions. Standard gzip compression is not sufficient—you must use bgzip specifically.
+
+If your VCF files are uncompressed or compressed with standard gzip, you'll need to compress them with bgzip. The `bgzip()` function from the Rsamtools package can be used for this purpose:
+
+```{r bgzip_example, eval=FALSE}
+library(Rsamtools)
+
+# Compress an uncompressed VCF file
+bgzip("mydata.vcf", dest = "mydata.vcf.gz")
+
+# If your file is already gzipped but not bgzipped, decompress first:
+# system("gunzip mydata.vcf.gz")  # then use bgzip as above
+```
+
+**Important:** The output file name should be the original file name with `.gz` appended at the end. For example:
+- `chr1.vcf` → `chr1.vcf.gz`
+- `mydata.vcf` → `mydata.vcf.gz`
+
+### Creating Tabix Index Files
+
+After bgzipping your VCF files, you need to create tabix index files (`.tbi`) to enable fast random access to variants. Tabix index files:
+
+- Have the same name as the VCF file with `.tbi` appended (e.g., `chr1.vcf.gz.tbi`)
+- Are located in the same directory as the VCF file
+- Only need to be created once—if they already exist, they do not need to be recreated
+
+The `create_tabix_files()` function indexes one or more bgzipped VCF files and supports parallel processing for efficiency.
+
+### Example: Creating Tabix Files
+
+This example demonstrates how to create tabix index files for VCF files. We'll copy two VCF files distributed with the package to a temporary directory and create their tabix indices.
+
+```{r create_tabix_example}
+library(PRSfromPGS)
+
+# Create a temporary directory for this example
+temp_dir <- tempdir()
+message("Working in temporary directory: ", temp_dir)
+
+# Get paths to example VCF files distributed with the package
+# These files are already bgzipped
+vcf1_source <- system.file("extdata", "chr1.vcf.gz", package = "PRSfromPGS")
+vcf2_source <- system.file("extdata", "chr2.vcf.gz", package = "PRSfromPGS")
+
+# Copy VCF files to temporary directory
+vcf1_dest <- file.path(temp_dir, "chr1.vcf.gz")
+vcf2_dest <- file.path(temp_dir, "chr2.vcf.gz")
+
+file.copy(vcf1_source, vcf1_dest, overwrite = TRUE)
+file.copy(vcf2_source, vcf2_dest, overwrite = TRUE)
+
+message("\nCopied VCF files:")
+message("  ", vcf1_dest)
+message("  ", vcf2_dest)
+
+# Create vector of VCF file paths
+vcf_files <- c(vcf1_dest, vcf2_dest)
+
+# Create tabix index files
+# Note: You can set ncores > 1 for parallel processing with multiple files
+result <- create_tabix_files(vcf_files, ncores = 1, verbose = TRUE)
+
+# Display results
+print(result)
+
+# Verify that tabix files were created
+tabix_files <- paste0(vcf_files, ".tbi")
+tabix_exist <- file.exists(tabix_files)
+
+message("\nTabix files created:")
+for (i in seq_along(tabix_files)) {
+  message(sprintf("  %s: %s",
+                  basename(tabix_files[i]),
+                  ifelse(tabix_exist[i], "YES", "NO")))
+}
+```
+
+### Parallel Processing
+
+If you have many VCF files to index, you can speed up the process by using parallel processing:
+
+```{r parallel_example, eval=FALSE}
+# Index multiple files using 4 cores
+vcf_files <- c("chr1.vcf.gz", "chr2.vcf.gz", "chr3.vcf.gz", "chr4.vcf.gz")
+result <- create_tabix_files(vcf_files, ncores = 4, verbose = TRUE)
+```
+
+**Note:** Parallel processing requires the BiocParallel package. If it's not available, `create_tabix_files()` will automatically fall back to sequential processing.
+
+### Checking for Existing Tabix Files
+
+If you're unsure whether your VCF files already have tabix indices, you can check before running `create_tabix_files()`:
+
+```{r check_tabix, eval=FALSE}
+# Check if tabix files exist
+vcf_files <- c("chr1.vcf.gz", "chr2.vcf.gz")
+tabix_files <- paste0(vcf_files, ".tbi")
+
+for (i in seq_along(vcf_files)) {
+  has_index <- file.exists(tabix_files[i])
+  message(sprintf("%s: %s",
+                  vcf_files[i],
+                  ifelse(has_index, "already indexed", "needs indexing")))
+}
+```
+
+## Processing VCF Files
+
+Once your VCF files are bgzipped and indexed, the next step is to process them into chromosome-specific summary files using `prepareVCFfiles()`. This function:
+
+- Reads variant metadata from each VCF file
+- Extracts sample IDs and genomic coordinates
+- Saves the data as RDS files named `chromosome{N}VCFsummary.rds`
+- Enables efficient downstream PRS calculation by avoiding repeated VCF parsing
+
+### Understanding VCF Summary Files
+
+Each chromosome summary RDS file contains:
+
+- **file**: Path to the original VCF file
+- **genome**: Genome build (extracted from VCF header)
+- **snps**: Data frame with variant positions, IDs, and alleles
+- **rowRanges**: GRanges object with genomic coordinates
+- **samples**: Character vector of sample IDs
+
+These summaries store variant metadata but **not** genotype data, which is read on-demand during scoring to minimize memory usage.
+
+### Basic Usage
+
+Here's a simple example processing VCF files for chromosomes 1 and 2:
+
+```{r prepare_vcf_example}
+library(PRSfromPGS)
+
+# Create a temporary directory for output
+temp_dir <- tempdir()
+
+# Get paths to example VCF files
+vcf1 <- system.file("extdata", "chr1.vcf.gz", package = "PRSfromPGS")
+vcf2 <- system.file("extdata", "chr2.vcf.gz", package = "PRSfromPGS")
+
+# Process VCF files (creates chromosome1VCFsummary.rds and chromosome2VCFsummary.rds)
+# The function automatically detects chromosome numbers from the VCF files
+prepareVCFfiles(
+  vcf_files = c(vcf1, vcf2),
+  genome = "hg19",
+  output_dir = temp_dir,
+  verbose = TRUE
+)
+
+# Check what files were created
+message("\nCreated summary files:")
+summary_files <- list.files(temp_dir, pattern = "chromosome.*VCFsummary.rds", full.names = TRUE)
+for (f in summary_files) {
+  message("  ", basename(f))
+}
+```
+
+### Inspecting VCF Summary Contents
+
+You can load and examine the summary files directly:
+
+```{r inspect_summary}
+# Load chromosome 1 summary from the temp directory
+chr1_summary <- readRDS(file.path(temp_dir, "chromosome1VCFsummary.rds"))
+
+# View sample IDs
+message("Samples in VCF file: ", paste(chr1_summary$sample_ids, collapse = ", "))
+
+# View variant data (stored in snp_summary$snp_df)
+message("\nFirst few variants:")
+print(head(chr1_summary$snp_summary$snp_df))
+
+# Check genome build
+message("\nGenome build: ", chr1_summary$genome)
+```
+
+### Processing All Chromosomes
+
+For a complete analysis, you'll typically process all 22 autosomes. If your VCF files follow a consistent naming pattern (e.g., `chr1.vcf.gz`, `chr2.vcf.gz`, ...), you can process them all at once:
+
+```{r process_all_example, eval=FALSE}
+# Get paths to all chromosome VCF files
+vcf_dir <- "path/to/your/vcf/files"
+vcf_files <- file.path(vcf_dir, paste0("chr", 1:22, ".vcf.gz"))
+
+# Verify all files exist
+all_exist <- all(file.exists(vcf_files))
+if (!all_exist) {
+  stop("Some VCF files are missing!")
+}
+
+# Process all chromosomes
+# This will create chromosome1VCFsummary.rds through chromosome22VCFsummary.rds
+# The chromosome numbers are automatically detected from each VCF file
+prepareVCFfiles(
+  vcf_files = vcf_files,
+  genome = "hg19",
+  output_dir = ".",
+  verbose = TRUE
+)
+```
+
+### Parallel Processing for Speed
+
+For large VCF files, parallel processing can significantly reduce processing time:
+
+```{r parallel_prepare_example, eval=FALSE}
+# Process VCF files using 4 cores
+prepareVCFfiles(
+  vcf_files = vcf_files,
+  genome = "hg19",
+  output_dir = ".",
+  ncores = 4,
+  verbose = TRUE
+)
+```
+
+**Note:** Parallel processing requires the `BiocParallel` package. The function uses `BiocParallel::MulticoreParam` for parallel processing and will automatically fall back to sequential processing if BiocParallel is not available.
+
+### Important Notes
+
+1. **Output location**: Summary RDS files are saved in the directory specified by `output_dir` (default is current directory `"."`). Specify a different directory to organize your files, or plan to run subsequent PRS calculations from the same directory.
+
+2. **Chromosome detection**: The function automatically detects chromosome numbers from the VCF file data itself (from the first variant's chromosome field). You don't need to specify which chromosome each file contains.
+
+3. **File naming**: Output files are always named `chromosome{N}VCFsummary.rds` where `{N}` is the detected chromosome number. The function strips any "chr" prefix for consistent naming.
+
+4. **Re-running**: The function will overwrite existing summary files if run again. If summary files already exist and are up-to-date, you can skip this step.
+
+## Reading PGS Models
+
+PGS Catalog scoring files are tab-delimited text files with a header block of comment lines (starting with `#`) followed by variant data. `readPGSmodel()` handles this format and normalises column names so that both original and harmonized PGS Catalog column names are accepted.
+
+The returned data frame always has six columns:
+
+| Column | Description |
+|--------|-------------|
+| `rsID` | Variant identifier (or composite `chr:pos:ea:oa` if rsID is absent) |
+| `chr_name` | Chromosome number |
+| `chr_position` | Base-pair position |
+| `effect_allele` | The allele whose dosage is weighted |
+| `other_allele` | The complementary allele |
+| `effect_weight` | The beta / log-OR weight |
+
+### Basic Usage
+
+```{r read_pgs_example}
+# Get path to example PGS model file
+pgs_file <- system.file("extdata", "PGS000001_test.txt", package = "PRSfromPGS")
+
+# Read the model
+pgs_model <- readPGSmodel(pgs_file)
+
+# Inspect the result
+print(pgs_model)
+```
+
+### Column Normalisation
+
+`readPGSmodel()` automatically maps harmonized column names to the standard set:
+
+- `hm_chr` → `chr_name`
+- `hm_pos` → `chr_position`
+- `hm_inferOtherAllele` → `other_allele`
+
+When `rsID` is missing or blank, a composite identifier is created from `chr_name:chr_position:effect_allele:other_allele`. This ensures every variant has a unique ID for downstream matching.
+
+### Reading Multiple Models
+
+When scoring multiple traits, read each model separately before passing them to `fitPRSmodels()`:
+
+```{r read_multiple_models_example, eval=FALSE}
+pgs_files <- c(
+  system.file("extdata", "PGS000001_test.txt", package = "PRSfromPGS"),
+  system.file("extdata", "PGS000002_test.txt", package = "PRSfromPGS")
+)
+
+models <- lapply(pgs_files, readPGSmodel, verbose = FALSE)
+names(models) <- c("PGS000001", "PGS000002")
+
+# Check number of variants per model
+sapply(models, nrow)
+```
+
+## Calculating PRS
+
+With VCF summaries on disk and a PGS model loaded, `calculatePRS()` scores all samples by iterating over chromosomes, matching variants by position and allele, and summing weighted dosages.
+
+### Basic Usage
+
+```{r calculate_prs_example}
+# Use the VCF summaries created earlier (in temp_dir)
+result <- calculatePRS(
+  pgsmodel   = pgs_model,
+  vcf_dir    = temp_dir,
+  chromosomes = 1:22,
+  verbose    = TRUE
+)
+
+# The PRS vector: one value per sample
+prs <- result$prs
+print(prs)
+```
+
+### Understanding the Return Value
+
+`calculatePRS()` returns a list with four elements:
+
+```{r prs_results_example}
+# PRS values (named numeric vector: sample IDs → scores)
+message("Samples: ", paste(names(result$prs), collapse = ", "))
+message("PRS values: ", paste(round(result$prs, 4), collapse = ", "))
+
+# Unmatched SNP counts per chromosome
+message("\nUnmatched SNPs by chromosome:")
+print(result$unmatched_by_chr[result$unmatched_by_chr > 0])
+
+# SNPs excluded because their chromosome wasn't in `chromosomes`
+if (length(result$excluded_chr_counts) > 0) {
+  message("\nSNPs on non-autosomal chromosomes:")
+  print(result$excluded_chr_counts)
+} else {
+  message("\nAll model variants were on processed chromosomes.")
+}
+```
+
+### REF vs ALT Allele Matching
+
+The scoring logic handles both orientations automatically:
+
+- **ALT match**: the effect allele equals the VCF ALT allele → dosage (DS) is used directly
+- **REF match**: the effect allele equals the VCF REF allele → effect-allele dosage = `2 − DS`
+
+You do not need to pre-harmonize allele orientation; the package resolves it per variant.
+
+### Parallel Processing
+
+For models with many variants across all 22 chromosomes, parallel chromosome processing can reduce run time:
+
+```{r parallel_prs_example, eval=FALSE}
+# Requires: future, future.apply, parallelly packages
+result <- calculatePRS(
+  pgsmodel    = pgs_model,
+  vcf_dir     = temp_dir,
+  chromosomes = 1:22,
+  parallel    = TRUE,
+  n_cores     = 4
+)
+```
+
+On Windows, `multisession` (separate R processes) is used automatically; on Unix/Linux/Mac, `multicore` (forking) is used instead.
+
+## Scoring Multiple Models with fitPRSmodels()
+
+When computing PRS for several traits simultaneously, `fitPRSmodels()` is considerably more efficient than calling `calculatePRS()` in a loop: each chromosome's VCF data is read only **once** and then applied to all models.
+
+### Basic Usage
+
+```{r fit_prs_models_example}
+# Paths to multiple PGS model files
+model_files <- c(
+  system.file("extdata", "PGS000001_test.txt", package = "PRSfromPGS"),
+  system.file("extdata", "PGS000002_test.txt", package = "PRSfromPGS"),
+  system.file("extdata", "PGS000003_test.txt", package = "PRSfromPGS")
+)
+
+multi_result <- fitPRSmodels(
+  model_files = model_files,
+  vcf_dir     = temp_dir,
+  chromosomes = 1:22,
+  verbose     = TRUE
+)
+```
+
+### The PRS Matrix
+
+Unlike `calculatePRS()`, `fitPRSmodels()` returns a **matrix** where rows are samples and columns are models:
+
+```{r prs_matrix_example}
+prs_matrix <- multi_result$prs
+
+message("Dimensions: ", nrow(prs_matrix), " samples × ", ncol(prs_matrix), " models")
+print(prs_matrix)
+```
+
+Model columns are named after the portion of the file name before the first `.` or `_` (e.g., `PGS000001_test.txt` → `PGS000001`).
+
+### Accessing Per-Model Diagnostics
+
+```{r model_diagnostics_example}
+# Unmatched SNP counts for each model
+for (model_name in colnames(prs_matrix)) {
+  unmatched <- sum(multi_result$unmatched_by_chr[[model_name]])
+  message(sprintf("Model %s: %d unmatched SNPs", model_name, unmatched))
+}
+```
+
+### Saving and Loading Results
+
+```{r save_results_example, eval=FALSE}
+# Save the PRS matrix to a CSV file
+write.csv(prs_matrix, file = "prs_results.csv", row.names = TRUE)
+
+# Or save as an RDS file for later use in R
+saveRDS(multi_result, file = "prs_results.rds")
+
+# Reload later
+multi_result <- readRDS("prs_results.rds")
+prs_matrix   <- multi_result$prs
+```
+
+## Advanced Topics
+
+### Memory Management with `batch_size`
+
+VCF summary files store only variant **metadata** (positions, allele codes, sample IDs). Genotype dosages are read from the original `.vcf.gz` files on-demand during scoring, which keeps memory usage low for large cohorts.
+
+Dosages are loaded in batches controlled by the `batch_size` argument (default: 1000 SNPs per batch). If you encounter memory pressure, reduce this value:
+
+```{r batch_size_example, eval=FALSE}
+# Use smaller batches if memory is limited
+result <- calculatePRS(
+  pgsmodel  = pgs_model,
+  vcf_dir   = temp_dir,
+  batch_size = 200
+)
+
+# fitPRSmodels() accepts the same argument
+multi_result <- fitPRSmodels(
+  model_files = model_files,
+  vcf_dir     = temp_dir,
+  batch_size  = 200
+)
+```
+
+Conversely, increasing `batch_size` reduces the number of file-read operations and can improve speed when memory is plentiful.
+
+### Parallel Processing: Two Independent Mechanisms
+
+PRSfromPGS uses two separate parallelism layers that can be used independently:
+
+| Stage | Function | Package | Argument |
+|-------|----------|---------|----------|
+| VCF indexing | `create_tabix_files()` | `BiocParallel` | `ncores` |
+| VCF summarising | `prepareVCFfiles()` | `BiocParallel` | `ncores` |
+| PRS scoring | `calculatePRS()` | `future` / `future.apply` | `parallel`, `n_cores` |
+| Multi-model scoring | `fitPRSmodels()` | `future` / `future.apply` | `parallel`, `n_cores` |
+
+Installing optional packages:
+
+```{r install_parallel, eval=FALSE}
+# For VCF preparation parallelism
+BiocManager::install("BiocParallel")
+
+# For PRS scoring parallelism
+install.packages(c("future", "future.apply", "parallelly"))
+```
+
+All parallel packages are optional — every function falls back to sequential processing if they are not installed.
+
+#### Platform differences
+
+`calculatePRS()` and `fitPRSmodels()` use process-based parallelism on **Windows** (`multisession`) and fork-based parallelism on **Unix/Linux/Mac** (`multicore`). Forking is faster because workers share the parent process memory; multisession requires serialising data to each worker.
+
+```{r parallel_notes, eval=FALSE}
+# This works on all platforms — the right backend is selected automatically
+result <- calculatePRS(
+  pgsmodel = pgs_model,
+  vcf_dir  = temp_dir,
+  parallel = TRUE,
+  n_cores  = 4
+)
+```
+
+### Troubleshooting
+
+#### High unmatched SNP counts
+
+If `result$unmatched_by_chr` shows many unmatched variants, common causes are:
+
+1. **Wrong genome build** — ensure the `genome` argument to `prepareVCFfiles()` matches your VCF files, and that the PGS model was harmonized to the same build (check the `#HmPOS_build` header line).
+2. **Chromosome name mismatch** — the package strips a leading `chr` prefix from VCF chromosome names when naming summary files. Model files should use numeric chromosome names (e.g., `1`, not `chr1`).
+3. **Multi-allelic sites** — a VCF ALT field like `G,T` is matched as a literal string; variants split into separate bi-allelic records will match more reliably.
+
+```{r check_unmatched, eval=FALSE}
+# Inspect which specific variants were unmatched on chromosome 1
+result$unmatched_rsIDs[["1"]]
+
+# Cross-check against the model
+pgs_model[pgs_model$chr_name == 1, ]
+```
+
+#### VCF summary files not found
+
+`calculatePRS()` looks for files named `chromosome{N}VCFsummary.rds` in `vcf_dir`. If files are missing you will see status `"file_not_found"` for those chromosomes. Check that:
+
+- `vcf_dir` points to the directory where `prepareVCFfiles()` wrote its output
+- The chromosome number in the filename matches what is in your VCF (check `chr1_summary$snp_summary$snp_df$seqnames[1]`)
+
+```{r check_summaries, eval=FALSE}
+# List all summary files present
+list.files(vcf_dir, pattern = "chromosome.*VCFsummary.rds")
+
+# Expected: chromosome1VCFsummary.rds, chromosome2VCFsummary.rds, ...
+```
+
+#### Working directory pitfalls
+
+By default, `prepareVCFfiles()` writes to `output_dir = "."` and `calculatePRS()` reads from `vcf_dir = "."`. If you call `setwd()` between these steps the paths will no longer align. The safest approach is to use an explicit directory throughout:
+
+```{r explicit_dir, eval=FALSE}
+vcf_summary_dir <- "/path/to/vcf_summaries"
+
+prepareVCFfiles(vcf_files, output_dir = vcf_summary_dir)
+
+result <- calculatePRS(pgs_model, vcf_dir = vcf_summary_dir)
+```
+
+---
+
+## Cleanup
+
+```{r cleanup, include=FALSE}
+# Clean up temporary files
+if (exists("vcf1_dest")) unlink(vcf1_dest)
+if (exists("vcf2_dest")) unlink(vcf2_dest)
+if (exists("tabix_files")) unlink(tabix_files)
+if (exists("temp_dir")) {
+  unlink(file.path(temp_dir, "chromosome1VCFsummary.rds"))
+  unlink(file.path(temp_dir, "chromosome2VCFsummary.rds"))
+}
+```
+
+## Session Info
+
+```{r session_info}
+sessionInfo()
+```
