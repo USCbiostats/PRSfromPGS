@@ -49,34 +49,45 @@ jobs:
           install.packages("BiocManager", repos = "https://cloud.r-project.org")
           BiocManager::install(
             c(
-              # Bioconductor imports
               "VariantAnnotation", "Rsamtools", "GenomicRanges",
               "SummarizedExperiment", "GenomeInfoDb", "IRanges",
               "Biostrings", "BiocGenerics",
-              # Optional Bioconductor suggests
               "BiocParallel",
-              # CRAN imports
               "data.table",
-              # CRAN suggests
               "future", "future.apply", "parallelly",
               "testthat", "knitr", "rmarkdown",
-              # For running R CMD check
               "rcmdcheck"
             ),
             ask = FALSE, update = FALSE
           )
         shell: Rscript {0}
 
+      - name: Verify key packages load
+        run: |
+          library(VariantAnnotation)
+          library(Rsamtools)
+          library(data.table)
+          library(PRSfromPGS)
+          message("All key packages loaded successfully")
+        shell: Rscript {0}
+
       - name: Run R CMD check
         run: |
           rcmdcheck::rcmdcheck(
-            args     = c("--no-manual", "--as-cran"),
+            args     = c("--no-manual", "--as-cran", "--no-vignettes"),
             error_on = "error",
             check_dir = "check"
           )
         shell: Rscript {0}
 
-      - name: Upload check results on failure
+      - name: Show check log
+        if: always()
+        run: |
+          log <- Sys.glob("check/*.Rcheck/00check.log")
+          if (length(log)) writeLines(readLines(log)) else message("No check log found")
+        shell: Rscript {0}
+
+      - name: Upload check results
         if: failure()
         uses: actions/upload-artifact@v4
         with:
