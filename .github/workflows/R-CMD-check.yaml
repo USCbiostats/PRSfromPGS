@@ -67,8 +67,7 @@ jobs:
           library(VariantAnnotation)
           library(Rsamtools)
           library(data.table)
-          library(PRSfromPGS)
-          message("All key packages loaded successfully")
+          message("All key dependency packages loaded successfully")
         shell: Rscript {0}
 
       - name: Run R CMD check
