@@ -86,8 +86,26 @@ jobs:
       - name: Show check log
         if: always()
         run: |
+          summary_file <- Sys.getenv("GITHUB_STEP_SUMMARY")
+
+          write_section <- function(title, lines) {
+            cat(sprintf("\n## %s\n\n```\n", title), file = summary_file, append = TRUE)
+            cat(paste(lines, collapse = "\n"), file = summary_file, append = TRUE)
+            cat("\n```\n", file = summary_file, append = TRUE)
+          }
+
           log <- Sys.glob("check/*.Rcheck/00check.log")
-          if (length(log)) writeLines(readLines(log)) else message("No check log found")
+          if (length(log)) {
+            write_section("00check.log", readLines(log))
+          } else {
+            cat("## No check log found\n", file = summary_file, append = TRUE)
+          }
+
+          vout <- Sys.glob("check/*.Rcheck/vign*.Rout")
+          for (f in vout) write_section(basename(f), readLines(f))
+
+          fail <- Sys.glob("check/*.Rcheck/00install.out")
+          for (f in fail) write_section(basename(f), readLines(f))
         shell: Rscript {0}
 
       - name: Upload check results
