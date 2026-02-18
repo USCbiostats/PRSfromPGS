@@ -17,17 +17,17 @@
 Thumbs.db
 nul
 
-# Test VCF files
-chr1.vcf
-chr1.vcf.gz
-chr1.vcf.gz.tbi
-chr1.old.vcf
-chr2.vcf
-chr2.vcf.gz
-chr2.vcf.gz.tbi
+# Test VCF files (root-level only — inst/extdata/ files must be tracked)
+/chr1.vcf
+/chr1.vcf.gz
+/chr1.vcf.gz.tbi
+/chr1.old.vcf
+/chr2.vcf
+/chr2.vcf.gz
+/chr2.vcf.gz.tbi
 
-# VCF summary files
-chromosome*VCFsummary.rds
+# VCF summary files (root-level only — inst/extdata/ copy must be tracked)
+/chromosome*VCFsummary.rds
 
 # Junk directory
 junk/
