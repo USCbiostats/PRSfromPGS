@@ -74,6 +74,27 @@ jobs:
         run: R CMD INSTALL .
         shell: bash
 
+      - name: Verify PRSfromPGS loads and basic functions work
+        run: |
+          library(PRSfromPGS)
+          message("PRSfromPGS loaded OK")
+          vcf <- system.file("extdata", "chr1.vcf.gz", package = "PRSfromPGS")
+          message("chr1.vcf.gz path: ", vcf)
+          stopifnot(nchar(vcf) > 0)
+          td <- tempdir()
+          dest <- file.path(td, "chr1.vcf.gz")
+          file.copy(vcf, dest, overwrite = TRUE)
+          message("Calling create_tabix_files()...")
+          res <- create_tabix_files(dest, ncores = 1, verbose = TRUE)
+          message("create_tabix_files result: indexed=", res$indexed, " error=", res$error)
+          message("summarizevcf()...")
+          s <- summarizevcf(vcf, verbose = FALSE)
+          message("summarizevcf OK, samples: ", paste(s$sample_ids, collapse = ","))
+          pgs <- system.file("extdata", "PGS000001_test.txt", package = "PRSfromPGS")
+          m <- readPGSmodel(pgs, verbose = FALSE)
+          message("readPGSmodel OK, rows: ", nrow(m))
+        shell: Rscript {0}
+
       - name: Render vignette (capture output to artifact)
         run: |
           log <- "vignette_render.log"
