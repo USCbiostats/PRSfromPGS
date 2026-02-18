@@ -74,24 +74,37 @@ jobs:
         run: R CMD INSTALL .
         shell: bash
 
-      - name: Render vignette (dry run to expose errors)
+      - name: Render vignette (capture output to artifact)
         run: |
-          message("R version: ", R.version$version.string)
-          message("Platform: ", .Platform$OS.type)
-          message("Working dir: ", getwd())
-          out <- tryCatch(
+          log <- "vignette_render.log"
+          con <- file(log, open = "wt")
+          sink(con, type = "output")
+          sink(con, type = "message")
+          cat("R version:", R.version$version.string, "\n")
+          cat("Platform:", .Platform$OS.type, "\n")
+          cat("Working dir:", getwd(), "\n")
+          success <- tryCatch({
             rmarkdown::render(
               "vignettes/using-PRSfromPGS.Rmd",
               output_dir = tempdir(),
               quiet = FALSE
-            ),
-            error = function(e) {
-              message("ERROR: ", conditionMessage(e))
-              stop(e)
-            }
-          )
-          message("Vignette rendered OK: ", out)
+            )
+            TRUE
+          }, error = function(e) {
+            cat("FATAL ERROR:", conditionMessage(e), "\n")
+            FALSE
+          })
+          sink(type = "message"); sink(type = "output"); close(con)
+          writeLines(readLines(log))  # also echo to job log
+          if (!success) stop("Vignette render failed — see vignette_render.log artifact")
         shell: Rscript {0}
+
+      - name: Upload vignette render log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vignette-render-log-${{ matrix.config.os }}
+          path: vignette_render.log
 
       - name: Run R CMD check
         run: |
