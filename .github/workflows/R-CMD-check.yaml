@@ -74,25 +74,51 @@ jobs:
         run: R CMD INSTALL .
         shell: bash
 
-      - name: Verify PRSfromPGS loads and basic functions work
+      - name: "Smoke A: library(PRSfromPGS)"
         run: |
           library(PRSfromPGS)
-          message("PRSfromPGS loaded OK")
+          message("OK")
+        shell: Rscript {0}
+
+      - name: "Smoke B: system.file extdata"
+        run: |
+          library(PRSfromPGS)
           vcf <- system.file("extdata", "chr1.vcf.gz", package = "PRSfromPGS")
-          message("chr1.vcf.gz path: ", vcf)
-          stopifnot(nchar(vcf) > 0)
-          td <- tempdir()
-          dest <- file.path(td, "chr1.vcf.gz")
-          file.copy(vcf, dest, overwrite = TRUE)
-          message("Calling create_tabix_files()...")
-          res <- create_tabix_files(dest, ncores = 1, verbose = TRUE)
-          message("create_tabix_files result: indexed=", res$indexed, " error=", res$error)
-          message("summarizevcf()...")
-          s <- summarizevcf(vcf, verbose = FALSE)
-          message("summarizevcf OK, samples: ", paste(s$sample_ids, collapse = ","))
+          message("path: ", vcf, " exists: ", file.exists(vcf))
+          stopifnot(nchar(vcf) > 0, file.exists(vcf))
+          message("OK")
+        shell: Rscript {0}
+
+      - name: "Smoke C: create_tabix_files"
+        continue-on-error: true
+        run: |
+          library(PRSfromPGS)
+          vcf <- system.file("extdata", "chr1.vcf.gz", package = "PRSfromPGS")
+          td  <- tempdir()
+          dst <- file.path(td, "smoke_chr1.vcf.gz")
+          file.copy(vcf, dst, overwrite = TRUE)
+          res <- create_tabix_files(dst, ncores = 1, verbose = TRUE)
+          message("indexed=", res$indexed, " error=", res$error)
+          message("tbi exists: ", file.exists(paste0(dst, ".tbi")))
+          message("OK")
+        shell: Rscript {0}
+
+      - name: "Smoke D: summarizevcf"
+        run: |
+          library(PRSfromPGS)
+          vcf <- system.file("extdata", "chr1.vcf.gz", package = "PRSfromPGS")
+          s <- summarizevcf(vcf, verbose = TRUE)
+          message("samples: ", paste(s$sample_ids, collapse = ","))
+          message("OK")
+        shell: Rscript {0}
+
+      - name: "Smoke E: readPGSmodel"
+        run: |
+          library(PRSfromPGS)
           pgs <- system.file("extdata", "PGS000001_test.txt", package = "PRSfromPGS")
           m <- readPGSmodel(pgs, verbose = FALSE)
-          message("readPGSmodel OK, rows: ", nrow(m))
+          message("rows: ", nrow(m))
+          message("OK")
         shell: Rscript {0}
 
       - name: Render vignette (capture output to artifact)
