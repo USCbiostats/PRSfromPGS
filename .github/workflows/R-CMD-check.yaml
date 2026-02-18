@@ -74,6 +74,25 @@ jobs:
         run: R CMD INSTALL .
         shell: bash
 
+      - name: Render vignette (dry run to expose errors)
+        run: |
+          message("R version: ", R.version$version.string)
+          message("Platform: ", .Platform$OS.type)
+          message("Working dir: ", getwd())
+          out <- tryCatch(
+            rmarkdown::render(
+              "vignettes/using-PRSfromPGS.Rmd",
+              output_dir = tempdir(),
+              quiet = FALSE
+            ),
+            error = function(e) {
+              message("ERROR: ", conditionMessage(e))
+              stop(e)
+            }
+          )
+          message("Vignette rendered OK: ", out)
+        shell: Rscript {0}
+
       - name: Run R CMD check
         run: |
           rcmdcheck::rcmdcheck(
