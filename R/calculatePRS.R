@@ -297,7 +297,7 @@ snp_matches <- findSNPs(chr_pgsmodel, vcf_summary$snp_summary$snp_df)
 #'
 #' @param pgsmodel Data frame returned from readPGSmodel() containing PGS variant information.
 #'   Expected columns: rsID, chr_name, chr_position, effect_allele, other_allele, effect_weight
-#' @param chromosomes Integer vector of chromosome numbers to process. Default is 1:22 (autosomes).
+#' @param chromosomes Integer vector of chromosome numbers to process. Default is seq_len(22) (autosomes).
 #' @param vcf_dir Character string specifying directory containing VCF summary files. Default is "." (current directory).
 #' @param batch_size Integer; maximum number of SNPs to read from VCF at once. Default is 1000.
 #' @param parallel Logical; if TRUE, process chromosomes in parallel using future. Default is FALSE.
@@ -345,7 +345,7 @@ snp_matches <- findSNPs(chr_pgsmodel, vcf_summary$snp_summary$snp_df)
 #' # Calculate PRS using VCF summaries from a specific directory
 #' result <- calculatePRS(pgs_model, vcf_dir = "vcf_summaries")
 #' }
-calculatePRS <- function(pgsmodel, chromosomes = 1:22, vcf_dir = ".", batch_size = 1000, parallel = FALSE, n_cores = NULL, verbose = TRUE) {
+calculatePRS <- function(pgsmodel, chromosomes = seq_len(22), vcf_dir = ".", batch_size = 1000, parallel = FALSE, n_cores = NULL, verbose = TRUE) {
   # Validate inputs
   if (!is.data.frame(pgsmodel)) {
     stop("pgsmodel must be a data frame returned from readPGSmodel()")
@@ -378,7 +378,7 @@ calculatePRS <- function(pgsmodel, chromosomes = 1:22, vcf_dir = ".", batch_size
   if (parallel) {
     # Check for required packages
     required_pkgs <- c("future", "future.apply", "parallelly")
-    missing_pkgs <- required_pkgs[!sapply(required_pkgs, requireNamespace, quietly = TRUE)]
+    missing_pkgs <- required_pkgs[!vapply(required_pkgs, requireNamespace, logical(1), quietly = TRUE)]
     if (length(missing_pkgs) > 0) {
       stop(sprintf("Packages '%s' are required for parallel processing. Install with: install.packages(c('future', 'future.apply', 'parallelly'))",
                    paste(missing_pkgs, collapse = "', '")))
@@ -947,7 +947,7 @@ processChromosomeForModels <- function(chr, models, model_names, batch_size, vcf
 #' This is much more efficient than calling calculatePRS() separately for each model.
 #'
 #' @param model_files Character vector of file paths to PGS model files
-#' @param chromosomes Integer vector of chromosome numbers to process. Default is 1:22 (autosomes).
+#' @param chromosomes Integer vector of chromosome numbers to process. Default is seq_len(22) (autosomes).
 #' @param vcf_dir Character string specifying directory containing VCF summary files. Default is "." (current directory).
 #' @param batch_size Integer; maximum number of SNPs to read from VCF at once. Default is 1000.
 #' @param parallel Logical; if TRUE, process chromosomes in parallel using future. Default is FALSE.
@@ -991,7 +991,7 @@ processChromosomeForModels <- function(chr, models, model_names, batch_size, vcf
 #' # Fit models using VCF summaries from a specific directory
 #' results <- fitPRSmodels(model_files, vcf_dir = "vcf_summaries")
 #' }
-fitPRSmodels <- function(model_files, chromosomes = 1:22, vcf_dir = ".", batch_size = 1000, parallel = FALSE, n_cores = NULL, verbose = TRUE) {
+fitPRSmodels <- function(model_files, chromosomes = seq_len(22), vcf_dir = ".", batch_size = 1000, parallel = FALSE, n_cores = NULL, verbose = TRUE) {
   # Validate inputs
   if (!is.character(model_files) || length(model_files) == 0) {
     stop("model_files must be a non-empty character vector")
@@ -1042,7 +1042,7 @@ fitPRSmodels <- function(model_files, chromosomes = 1:22, vcf_dir = ".", batch_s
   if (parallel) {
     # Check for required packages
     required_pkgs <- c("future", "future.apply", "parallelly")
-    missing_pkgs <- required_pkgs[!sapply(required_pkgs, requireNamespace, quietly = TRUE)]
+    missing_pkgs <- required_pkgs[!vapply(required_pkgs, requireNamespace, logical(1), quietly = TRUE)]
     if (length(missing_pkgs) > 0) {
       stop(sprintf("Packages '%s' are required for parallel processing. Install with: install.packages(c('future', 'future.apply', 'parallelly'))",
                    paste(missing_pkgs, collapse = "', '")))

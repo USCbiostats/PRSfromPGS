@@ -231,7 +231,7 @@ summarizesnpinfo <- function(vcf_snps, verbose = TRUE) {
 #' dosages <- getvcfsnp(vcf_summary, snp_indices = c(1, 2, 5, 10))
 #'
 #' # Read a range of SNPs with verbose output
-#' dosages <- getvcfsnp(vcf_summary, snp_indices = 1:100, verbose = TRUE)
+#' dosages <- getvcfsnp(vcf_summary, snp_indices = seq_len(100), verbose = TRUE)
 #' }
 getvcfsnp <- function(vcf_summary, snp_indices, verbose = FALSE) {
   # Validate input
