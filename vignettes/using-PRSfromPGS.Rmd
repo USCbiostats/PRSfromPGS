@@ -1,8 +1,15 @@
 ---
 title: "Using PRSfromPGS to Calculate Polygenic Risk Scores"
-author: "PRSfromPGS Authors"
+author:
+  - name: John Morrison
+    affiliation: University of Southern California
+    email: jmorr@usc.edu
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_float: true
+package: PRSfromPGS
 vignette: >
   %\VignetteIndexEntry{Using PRSfromPGS to Calculate Polygenic Risk Scores}
   %\VignetteEngine{knitr::rmarkdown}

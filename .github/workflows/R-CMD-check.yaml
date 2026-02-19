@@ -53,6 +53,7 @@ jobs:
               "SummarizedExperiment", "GenomeInfoDb", "IRanges",
               "Biostrings", "BiocGenerics",
               "BiocParallel",
+              "BiocStyle",
               "data.table",
               "future", "future.apply", "parallelly",
               "testthat", "knitr", "rmarkdown",
