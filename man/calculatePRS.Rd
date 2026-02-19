@@ -6,7 +6,7 @@
 \usage{
 calculatePRS(
   pgsmodel,
-  chromosomes = 1:22,
+  chromosomes = seq_len(22),
   vcf_dir = ".",
   batch_size = 1000,
   parallel = FALSE,
@@ -18,7 +18,7 @@ calculatePRS(
 \item{pgsmodel}{Data frame returned from readPGSmodel() containing PGS variant information.
 Expected columns: rsID, chr_name, chr_position, effect_allele, other_allele, effect_weight}
 
-\item{chromosomes}{Integer vector of chromosome numbers to process. Default is 1:22 (autosomes).}
+\item{chromosomes}{Integer vector of chromosome numbers to process. Default is seq_len(22) (autosomes).}
 
 \item{vcf_dir}{Character string specifying directory containing VCF summary files. Default is "." (current directory).}
 

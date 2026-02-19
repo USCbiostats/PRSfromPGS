@@ -1,5 +1,7 @@
 ^CLAUDE\.md$
 ^nul$
+^\.claude$
+^\.github$
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^chr1\.vcf$

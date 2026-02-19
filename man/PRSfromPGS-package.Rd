@@ -9,7 +9,15 @@
 Calculates Polygenic Risk Scores (PRS) from genetic data. Reads genotype dosage data from bgzipped VCF files and applies PGS Catalog-format scoring models to produce per-sample risk scores.
 }
 \author{
-\strong{Maintainer}: PRSfromPGS Authors \email{placeholder@example.com}
+\strong{Maintainer}: John Morrison \email{jmorr@usc.edu} (\href{https://orcid.org/0000-0003-1478-9965}{ORCID})
+
+Other contributors:
+\itemize{
+  \item NCI (CA196559) [funder]
+  \item NCI (CA201407) [funder]
+  \item NIEHS (ES007048) [funder]
+  \item NHLBI (HL115606) [funder]
+}
 
 }
 \keyword{internal}

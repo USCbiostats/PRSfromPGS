@@ -6,7 +6,7 @@
 \usage{
 fitPRSmodels(
   model_files,
-  chromosomes = 1:22,
+  chromosomes = seq_len(22),
   vcf_dir = ".",
   batch_size = 1000,
   parallel = FALSE,
@@ -17,7 +17,7 @@ fitPRSmodels(
 \arguments{
 \item{model_files}{Character vector of file paths to PGS model files}
 
-\item{chromosomes}{Integer vector of chromosome numbers to process. Default is 1:22 (autosomes).}
+\item{chromosomes}{Integer vector of chromosome numbers to process. Default is seq_len(22) (autosomes).}
 
 \item{vcf_dir}{Character string specifying directory containing VCF summary files. Default is "." (current directory).}
 
