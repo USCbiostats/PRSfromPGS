@@ -70,23 +70,27 @@ readPGSmodel <- function(file_path, verbose = TRUE) {
     message(sprintf("Columns: %s", paste(names(pgs_data), collapse = ", ")))
   }
 
-  # Create chr_name column if it doesn't exist
-  if (!"chr_name" %in% names(pgs_data)) {
-    if ("hm_chr" %in% names(pgs_data)) {
-      pgs_data$chr_name <- pgs_data$hm_chr
-      if (verbose) {
-        message("Column 'chr_name' not found - using hm_chr values")
-      }
+  # Set chr_name: prefer hm_chr (harmonized), fall back to chr_name
+  if ("hm_chr" %in% names(pgs_data)) {
+    pgs_data$chr_name <- pgs_data$hm_chr
+    if (verbose) {
+      message("Using hm_chr values for chr_name")
+    }
+  } else if (!"chr_name" %in% names(pgs_data)) {
+    if (verbose) {
+      message("Warning: Neither 'hm_chr' nor 'chr_name' column found")
     }
   }
 
-  # Create chr_position column if it doesn't exist
-  if (!"chr_position" %in% names(pgs_data)) {
-    if ("hm_pos" %in% names(pgs_data)) {
-      pgs_data$chr_position <- pgs_data$hm_pos
-      if (verbose) {
-        message("Column 'chr_position' not found - using hm_pos values")
-      }
+  # Set chr_position: prefer hm_pos (harmonized), fall back to chr_position
+  if ("hm_pos" %in% names(pgs_data)) {
+    pgs_data$chr_position <- pgs_data$hm_pos
+    if (verbose) {
+      message("Using hm_pos values for chr_position")
+    }
+  } else if (!"chr_position" %in% names(pgs_data)) {
+    if (verbose) {
+      message("Warning: Neither 'hm_pos' nor 'chr_position' column found")
     }
   }
 
