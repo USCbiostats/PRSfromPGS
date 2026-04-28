@@ -42,7 +42,8 @@ jobs:
             libbz2-dev \
             liblzma-dev \
             libharfbuzz-dev \
-            libfribidi-dev
+            libfribidi-dev \
+            libuv1-dev
         shell: bash
 
       - name: Install R dependencies via BiocManager
